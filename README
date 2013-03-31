@@ -16,6 +16,8 @@ see:
 
 http://fitzgen.github.com/pycco/
 
+Just thinking : Maybe a pygments HTML formatter subclass could be a cleaner way to do this ?
+
 Others:
 
 CoffeeScript (Original) - http://jashkenas.github.com/docco/
@@ -23,3 +25,4 @@ CoffeeScript (Original) - http://jashkenas.github.com/docco/
 Ruby - http://rtomayko.github.com/rocco/
 
 Sh - http://rtomayko.github.com/shocco/
+
