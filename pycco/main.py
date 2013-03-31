@@ -31,6 +31,9 @@ Or, to install the latest source
     python setup.py install
 """
 
+import logging
+
+
 # === Main Documentation Generation Functions ===
 
 def generate_documentation(source, outdir=None, preserve_paths=True,
@@ -46,7 +49,9 @@ def generate_documentation(source, outdir=None, preserve_paths=True,
     code = open(source, "r").read()
     language = get_language(source, code, language=language)
     sections = parse(source, code, language)
+    logging.debug("gendoc sections : {0}".format(str(sections)))
     highlight(source, sections, language, preserve_paths=preserve_paths, outdir=outdir)
+    logging.debug("gendoc sections : {0}".format(str(sections)))
     return generate_html(source, sections, preserve_paths=preserve_paths, outdir=outdir)
 
 def parse(source, code, language):
@@ -89,6 +94,8 @@ def parse(source, code, language):
     multi_line_delimiters = [language.get("multistart"), language.get("multiend")]
 
     for line in lines:
+        logging.debug("current line : {0}".format(line))
+        logging.debug("multi_line : {0}".format(str(multi_line)))
 
         # Only go into multiline comments section when one of the delimiters is
         # found to be at the start of a line
@@ -200,6 +207,9 @@ def highlight(source, sections, language, preserve_paths=True, outdir=None):
     wherever our markers occur.
     """
 
+    logging.debug("highlight ; language : {0}".format(str(language)))
+    logging.debug('highlight ; language["divider_html"].pattern : {0}'.format(str(language["divider_html"].pattern)))
+
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
 
@@ -208,7 +218,14 @@ def highlight(source, sections, language, preserve_paths=True, outdir=None):
                                 formatters.get_formatter_by_name("html"))
 
     output = output.replace(highlight_start, "").replace(highlight_end, "")
-    fragments = re.split(language["divider_html"], output)
+    # Bugfix for HTML : pygments does not surrounds divider_text with span tags
+    if re.search(language["divider_html"], output):
+        # non XML languages
+        fragments = re.split(language["divider_html"], output)
+    else:
+        # when highlighting html (probably valid for all XML)
+        fragments = output.split(language["divider_text"])
+
     for i, section in enumerate(sections):
         section["code_html"] = highlight_start + shift(fragments, "") + highlight_end
         try:
@@ -308,6 +325,9 @@ languages = {
 
     ".hs": { "name": "haskell", "symbol": "--",
         "multistart": "{-", "multiend": "-}"},
+
+    ".html": { "name": "html", "symbol": "%%",
+        "multistart": "<!--", "multiend": "-->"},
 }
 
 # Build out the appropriate matchers and delimiters for each language.
@@ -489,6 +509,9 @@ def main():
                       dest='outdir', default='docs',
                       help='The output directory that the rendered files should go to.')
 
+    parser.add_option('-D', '--debug', action='store_true',
+                      help='Activates debug mode. Output generated in pycon.log')
+
     parser.add_option('-w', '--watch', action='store_true',
                       help='Watch original files and re-generate documentation on changes')
 
@@ -499,6 +522,11 @@ def main():
 
     process(sources, outdir=opts.outdir, preserve_paths=opts.paths,
             language=opts.language)
+
+    loglevel = logging.INFO
+    if opts.debug:
+        loglevel = logging.DEBUG
+    logging.basicConfig(filename='pycco.log', level=loglevel)
 
     # If the -w / --watch option was present, monitor the source directories
     # for changes and re-generate documentation for source files whenever they
